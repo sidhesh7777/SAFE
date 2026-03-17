@@ -45,7 +45,74 @@ async function updateWorkerHazardStatus() {
 window.addEventListener("DOMContentLoaded", () => {
   initSupabase();
   loadWorkers();
+  startLiveStatusPolling();
 });
+
+function setLiveStatusUI(status) {
+  const dot = document.getElementById("liveStatusDot");
+  const msg = document.getElementById("liveStatusMessage");
+  const work = document.getElementById("liveWorkTime");
+  const upd = document.getElementById("liveStatusUpdated");
+  if (!dot || !msg || !work || !upd) return; // not on workers.html
+
+  const alert = (status?.alert ?? "UNKNOWN").toString();
+  const message = status?.message ?? "—";
+  const worktime = status?.worktime ?? "—";
+  const time = status?.source_created_at || status?.created_at;
+
+  const alertUp = alert.toUpperCase();
+  const isOk = alertUp === "OK" || alertUp === "NORMAL" || alertUp === "SAFE";
+  const isCritical = alertUp.includes("SOS") || alertUp.includes("HEART");
+  const color = isOk ? "#18a558" : isCritical ? "#d32f2f" : "#f39c12";
+
+  dot.style.background = color;
+  dot.style.boxShadow = `0 0 0 4px ${color}1f`;
+  msg.textContent = message;
+  work.textContent = String(worktime);
+  upd.textContent = time ? new Date(time).toLocaleString() : "—";
+}
+
+async function loadLatestWorkerStatus() {
+  if (!supabaseClient) return null;
+  // Prefer ordering by source_created_at if it exists; otherwise fall back to created_at only.
+  let res = await supabaseClient
+    .from("worker_status")
+    .select("*")
+    .order("source_created_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (res.error) {
+    // If source_created_at column doesn't exist yet, retry with created_at.
+    res = await supabaseClient
+      .from("worker_status")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1);
+  }
+
+  if (res.error) {
+    console.error("worker_status load error", res.error);
+    return null;
+  }
+
+  return res.data?.[0] || null;
+}
+
+let _liveStatusTimer = null;
+async function startLiveStatusPolling() {
+  // Only start on pages that have the status bar.
+  if (!document.getElementById("liveStatusBar")) return;
+  if (_liveStatusTimer) return;
+
+  const tick = async () => {
+    const status = await loadLatestWorkerStatus();
+    if (status) setLiveStatusUI(status);
+  };
+
+  await tick();
+  _liveStatusTimer = setInterval(tick, 3000);
+}
 
 // LOAD WORKERS
 async function loadWorkers() {
