@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="logo.png" type="image/png">
+
+<title>Sanitation Workers Portal</title>
+
+<style>
+
+/* PAGE STYLE */
+
+body{
+margin:0;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#e9f2f9;
+font-family:Arial, Helvetica, sans-serif;
+overflow:hidden;
+}
+
+
+/* SPLASH CONTAINER */
+
+.splash-container{
+text-align:center;
+animation:fadeIn 2s ease-in-out;
+}
+
+
+/* LOGO */
+
+.logo{
+width:160px;
+margin-bottom:20px;
+animation:zoom 2s ease;
+}
+
+
+/* TITLE */
+
+.title{
+font-size:28px;
+color:#1f3a5f;
+font-weight:bold;
+}
+
+
+/* SUBTITLE */
+
+.subtitle{
+font-size:16px;
+color:#666;
+margin-top:10px;
+}
+
+
+
+/* ANIMATIONS */
+
+@keyframes fadeIn{
+from{opacity:0;}
+to{opacity:1;}
+}
+
+@keyframes zoom{
+0%{transform:scale(0.5);}
+100%{transform:scale(1);}
+}
+
+</style>
+
+
+<script>
+
+/* Redirect to login page after 3 seconds */
+
+setTimeout(function(){
+
+window.location.href="index.html";
+
+},3000);
+
+</script>
+
+</head>
+
+<body>
+
+
+
+<div class="splash-container">
+
+<img src="logo.png" class="logo">
+
+<div class="title">Sanitation Workers Portal</div>
+
+<div class="subtitle">Municipal Worker Monitoring System</div>
+
+</div>
+
+
+
+</body>
+
+</html>

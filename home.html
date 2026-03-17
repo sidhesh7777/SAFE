@@ -1,0 +1,416 @@
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="logo.png" type="image/png">
+<!DOCTYPE html>
+
+<title>Sanitation Workers Monitoring Portal</title>
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<style>
+
+/* FIXED NAVBAR */
+
+.navbar{
+position:fixed;
+top:0;
+width:100%;
+z-index:1000;
+}
+
+/* SECTION STYLE */
+
+.section{
+padding:120px 60px;
+min-height:100vh;
+}
+
+#home{
+background:#e9f2f9;
+}
+
+#schemes{
+background:#ffffff;
+}
+
+#workers{
+background:#f4f6f9;
+}
+
+.section h1{
+font-size:34px;
+margin-bottom:20px;
+}
+
+.section p{
+font-size:17px;
+line-height:1.7;
+}
+
+.guidelines{
+margin-top:30px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+gap:25px;
+}
+
+.guideline-box{
+background:white;
+padding:25px;
+border-radius:8px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+.guideline-box h3{
+margin-top:0;
+color:#1f3a5f;
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<!-- NAVBAR -->
+
+<div class="navbar">
+
+<img src="logo.png" class="nav-logo">
+
+<a href="#home" class="nav-link active">Home</a>
+
+<a href="#schemes" class="nav-link">Schemes</a>
+
+<a href="#workers" class="nav-link">Workers Profile</a>
+
+</div>
+
+
+
+<!-- HOME SECTION -->
+
+<section id="home" class="section">
+
+<h1>Sanitation Workers Monitoring and Welfare Portal</h1>
+
+<p>
+This digital portal is designed to support sanitation workers and supervisors
+by providing clear safety guidelines, welfare scheme information and
+worker monitoring tools. Sanitation workers play a vital role in maintaining
+public health and environmental cleanliness. Therefore, ensuring their safety,
+health protection and welfare is extremely important.
+</p>
+
+
+<h2>Essential Safety Guidelines for Sanitation Workers</h2>
+
+<div class="guidelines">
+
+
+<div class="guideline-box">
+
+<h3>Personal Protective Equipment (PPE)</h3>
+
+<ul>
+<li>Workers must always wear protective gloves, masks and boots while handling waste.</li>
+<li>Protective uniforms should be cleaned and maintained regularly.</li>
+<li>Face shields or goggles should be used when handling hazardous waste.</li>
+<li>Supervisors must ensure PPE availability before starting work.</li>
+</ul>
+
+</div>
+
+
+<div class="guideline-box">
+
+<h3>Health Monitoring</h3>
+
+<ul>
+<li>Sanitation workers should attend regular health checkups organised by municipal authorities.</li>
+<li>Vaccination programs should be followed for diseases such as tetanus and hepatitis.</li>
+<li>Any symptoms of illness must be reported immediately.</li>
+<li>Workers should maintain proper hygiene practices after completing sanitation tasks.</li>
+</ul>
+
+</div>
+
+
+<div class="guideline-box">
+
+<h3>Waste Handling Precautions</h3>
+
+<ul>
+<li>Never touch waste materials directly without protective gloves.</li>
+<li>Sharp objects must be handled carefully to prevent injuries.</li>
+<li>Medical and hazardous waste must be disposed of separately.</li>
+<li>Workers should follow the proper waste segregation guidelines.</li>
+</ul>
+
+</div>
+
+
+<div class="guideline-box">
+
+<h3>Workplace Safety Practices</h3>
+
+<ul>
+<li>Always follow instructions provided by supervisors.</li>
+<li>Avoid entering confined spaces without safety equipment.</li>
+<li>Ensure proper ventilation while working in underground drainage systems.</li>
+<li>Emergency contact numbers must always be accessible.</li>
+</ul>
+
+</div>
+
+</div>
+
+
+<h2>Importance of Sanitation Workers</h2>
+
+<p>
+Sanitation workers are essential for maintaining urban hygiene and preventing
+the spread of diseases. Their work ensures that communities remain clean,
+safe and environmentally sustainable. Municipal authorities must ensure that
+workers receive adequate support, training and protection to perform their
+duties safely and efficiently.
+</p>
+
+</section>
+
+
+
+<!-- SCHEMES SECTION -->
+
+<section id="schemes" class="section">
+
+<h1>Government Welfare Schemes for Sanitation Workers</h1>
+
+<p>
+Various government welfare programs have been introduced to improve the
+living conditions and social security of sanitation workers. These schemes
+focus on health protection, financial assistance, education support and
+insurance coverage.
+</p>
+
+
+<div class="grid">
+
+<div class="card health">
+
+<h2>Health Protection Scheme</h2>
+
+<p>
+The health protection scheme provides sanitation workers with free
+medical examinations, hospital treatments and health awareness
+programs. Regular medical camps are organised by municipal
+departments to ensure early detection of occupational diseases.
+</p>
+
+</div>
+
+
+<div class="card money">
+
+<h2>Financial Assistance Scheme</h2>
+
+<p>
+Under this scheme, sanitation workers are eligible for financial
+support, emergency funds and pension benefits. The scheme ensures
+that workers and their families receive economic stability during
+unexpected situations.
+</p>
+
+</div>
+
+
+<div class="card education">
+
+<h2>Education Support Program</h2>
+
+<p>
+The government offers scholarships and educational assistance
+to children of sanitation workers. This initiative helps families
+access better educational opportunities and improve their
+future prospects.
+</p>
+
+</div>
+
+
+<div class="card insurance">
+
+<h2>Insurance Coverage</h2>
+
+<p>
+Workers are covered under accident insurance and life insurance
+programs that provide financial compensation in case of injuries
+or unexpected events during sanitation duties.
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+
+
+<!-- WORKERS SECTION -->
+
+<section id="workers" class="section">
+
+<h1>Sanitation Workers Profile Management</h1>
+
+<p>
+Supervisors can use this section to monitor worker records,
+health conditions and role assignments. Worker information
+can be updated and managed efficiently through the portal.
+</p>
+
+
+<div class="controls">
+
+<input type="text" id="searchInput" placeholder="Search worker..." onkeyup="searchWorker()">
+
+<button onclick="openform()">Add Worker</button>
+
+</div>
+
+<div id="workerForm" class="form-container" style="display:none; position:relative; padding:16px; width:min(95%,700px); background:white; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.16); margin:20px auto;">
+<button style="position:absolute; top:8px; right:8px; border:none; background:transparent; font-size:24px; line-height:1; cursor:pointer; color:#444;" onclick="closeForm()">&times;</button>
+
+<label for="photoUrl">Worker Photo URL</label>
+<input type="url" id="photoUrl" placeholder="Enter image URL (optional)">
+
+<label for="name">Worker Name</label>
+<input type="text" id="name" placeholder="Enter Worker Name">
+
+<label for="age">Age</label>
+<input type="number" id="age" placeholder="Enter Age">
+
+<label for="role">Role</label>
+<select id="role">
+
+<option value="">Select Role</option>
+<option>Sweeper</option>
+<option>Garbage Collector</option>
+<option>Sewer Cleaner</option>
+<option>Waste Handler</option>
+<option>Landfill Worker</option>
+
+</select>
+
+<label for="mobile">Mobile Number</label>
+<input type="tel" id="mobile" placeholder="Enter Mobile Number">
+
+<label for="email">Email (Optional)</label>
+<input type="email" id="email" placeholder="Enter Email">
+
+<label for="gender">Gender</label>
+<select id="gender">
+
+<option value="">Select Gender</option>
+<option>Male</option>
+<option>Female</option>
+
+</select>
+
+<label for="bloodGroup">Blood Group</label>
+<select id="bloodGroup">
+
+<option value="">Select Blood Group</option>
+<option>A+</option>
+<option>A-</option>
+<option>B+</option>
+<option>B-</option>
+<option>AB+</option>
+<option>AB-</option>
+<option>O+</option>
+<option>O-</option>
+
+</select>
+
+<label for="workTime">Working Time</label>
+<input type="text" id="workTime" placeholder="Example: 8AM - 4PM">
+
+<label for="checkup">Last Health Checkup</label>
+<input type="date" id="checkup">
+
+<label for="health">Health Status</label>
+<select id="health">
+
+<option>Fit</option>
+<option>Warning</option>
+<option>Unfit</option>
+
+</select>
+
+<label for="photoFile">Worker Photo (File)</label>
+<input type="file" id="photoFile" accept="image/*">
+<label for="photoUrl">Photo URL (Optional fallback)</label>
+<input type="url" id="photoUrl" placeholder="Enter image URL (https://...)">
+
+<label for="history">Health History</label>
+<textarea id="history" placeholder="Enter health notes"></textarea>
+
+<br><br>
+
+<button onclick="addWorker()">Add Worker</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+
+<table id="workerTable"></table>
+
+<script src="script.js"></script>
+
+
+<script>
+
+    
+
+/* NAVBAR HIGHLIGHT ON SCROLL */
+
+const sections = document.querySelectorAll("section");
+const navLinks = document.querySelectorAll(".nav-link");
+
+window.onscroll = () => {
+
+let current = "";
+
+sections.forEach(section => {
+
+const sectionTop = section.offsetTop;
+
+if(pageYOffset >= sectionTop - 150){
+current = section.getAttribute("id");
+}
+
+});
+
+navLinks.forEach(link => {
+
+link.classList.remove("active");
+
+if(link.getAttribute("href").includes(current)){
+link.classList.add("active");
+}
+
+});
+
+};
+
+</script>
+
+
+
+</body>
+
+</html>
