@@ -36,6 +36,8 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 const SOURCE_TABLE = process.env.AI_SOURCE_TABLE || "thinkspeak_data";
 const STATUS_TABLE = process.env.AI_STATUS_TABLE || "worker_status";
+const WORKERS_TABLE = process.env.AI_WORKERS_TABLE || "workers";
+const RAVI_NAME_MATCH = process.env.RAVI_NAME_MATCH || "ravi";
 
 const INTERVAL_MS = Number(process.env.AI_INTERVAL_MS || 3000);
 
@@ -127,9 +129,33 @@ async function readLatestSourceRow() {
 }
 
 async function writeStatusRow(payload) {
-  const url = `${SUPABASE_PROJECT_URL}/rest/v1/${encodeURIComponent(STATUS_TABLE)}`;
+  // Use UPSERT to avoid duplicate-key crashes if the table has a PK/unique constraint
+  // on source_created_at (common for "latest status per reading" setups).
+  const url = `${SUPABASE_PROJECT_URL}/rest/v1/${encodeURIComponent(
+    STATUS_TABLE
+  )}?on_conflict=source_created_at`;
 
   await axios.post(url, payload, {
+    timeout: 8000,
+    headers: {
+      ...supabaseHeaders(),
+      "Content-Type": "application/json",
+      Prefer: "return=minimal,resolution=merge-duplicates",
+    },
+  });
+}
+
+async function updateRaviWorkTime(worktime) {
+  // Requirement: only Ravi's work_time should be updated in workers table.
+  // Others stay as-is (you can keep them 0 by default).
+  const url = `${SUPABASE_PROJECT_URL}/rest/v1/${encodeURIComponent(
+    WORKERS_TABLE
+  )}?name=ilike.${encodeURIComponent(RAVI_NAME_MATCH)}*`;
+
+  // workers.work_time column in your table is text, so store as string.
+  const payload = { work_time: String(Number.isFinite(Number(worktime)) ? Number(worktime) : 0) };
+
+  await axios.patch(url, payload, {
     timeout: 8000,
     headers: {
       ...supabaseHeaders(),
@@ -160,6 +186,9 @@ async function runOnce() {
 
     await writeStatusRow(statusRow);
     console.log("✅ AI status stored:", statusRow);
+
+    // Keep workers table in sync (Ravi only)
+    await updateRaviWorkTime(statusRow.worktime);
 
     await sendSmsIfNeeded(statusRow);
   } catch (err) {

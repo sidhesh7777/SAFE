@@ -5,6 +5,7 @@ const SUPABASE_KEY = "sb_publishable_ClaMyLJYxVyKaVyGjynNRw_xnUZRrsF";
 let supabaseClient;
 let workers = [];
 let selectedRow = null;
+let latestSensorWorktime = null;
 
 // INITIALIZE SUPABASE
 function initSupabase() {
@@ -46,18 +47,275 @@ window.addEventListener("DOMContentLoaded", () => {
   initSupabase();
   loadWorkers();
   startLiveStatusPolling();
+  lockWorkTimeInputs();
+  ensureGlobalAlertOverlay();
+  initAttendancePage();
 });
+
+async function initAttendancePage() {
+  // Only run on attendance.html
+  const dropdown = document.getElementById("attendanceWorkerDropdown");
+  const tableBody = document.getElementById("attendanceTableBody");
+  if (!dropdown || !tableBody) return;
+  await loadAttendanceWorkers();
+  await loadAttendanceData();
+}
+
+async function loadAttendanceWorkers() {
+  if (!supabaseClient) return;
+  const dropdown = document.getElementById("attendanceWorkerDropdown");
+  if (!dropdown) return;
+
+  const { data, error } = await supabaseClient.from("workers").select("name").order("name", { ascending: true });
+  if (error) {
+    console.error("attendance workers load error", error);
+    return;
+  }
+
+  dropdown.innerHTML = '<option value="">Select Worker</option>';
+  (data || []).forEach((worker) => {
+    if (!worker?.name) return;
+    const opt = document.createElement("option");
+    opt.value = worker.name;
+    opt.textContent = worker.name;
+    dropdown.appendChild(opt);
+  });
+}
+
+function getSelectedAttendanceWorkerName() {
+  const dropdown = document.getElementById("attendanceWorkerDropdown");
+  return (dropdown?.value || "").trim();
+}
+
+async function attendanceCheckIn() {
+  if (!supabaseClient) return;
+  const name = getSelectedAttendanceWorkerName();
+  if (!name) return alert("Select worker");
+
+  const payload = {
+    worker_name: name,
+    check_in: new Date().toISOString(),
+    status: "IN",
+  };
+
+  const { error } = await supabaseClient.from("attendance").insert([payload], { returning: "minimal" });
+  if (error) {
+    console.error("attendance checkin error", error);
+    alert(`Check In failed: ${error.message || "Unknown error"}`);
+    return;
+  }
+
+  loadAttendanceData();
+}
+
+async function attendanceCheckOut() {
+  if (!supabaseClient) return;
+  const name = getSelectedAttendanceWorkerName();
+  if (!name) return alert("Select worker");
+
+  const payload = {
+    check_out: new Date().toISOString(),
+    status: "OUT",
+  };
+
+  const { error } = await supabaseClient
+    .from("attendance")
+    .update(payload, { returning: "minimal" })
+    .eq("worker_name", name)
+    .eq("status", "IN");
+
+  if (error) {
+    console.error("attendance checkout error", error);
+    alert(`Check Out failed: ${error.message || "Unknown error"}`);
+    return;
+  }
+
+  loadAttendanceData();
+}
+
+function formatDateTimeMaybe(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString();
+}
+
+async function loadAttendanceData() {
+  if (!supabaseClient) return;
+  const tableBody = document.getElementById("attendanceTableBody");
+  if (!tableBody) return;
+
+  const { data, error } = await supabaseClient
+    .from("attendance")
+    .select("*")
+    .order("check_in", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("attendance load error", error);
+    return;
+  }
+
+  tableBody.innerHTML = "";
+  (data || []).forEach((row) => {
+    const tr = document.createElement("tr");
+    const status = (row.status || "").toString().toUpperCase();
+    const badgeClass = status === "IN" ? "in" : "out";
+    tr.innerHTML = `
+      <td>${row.worker_name || "-"}</td>
+      <td>${formatDateTimeMaybe(row.check_in)}</td>
+      <td>${formatDateTimeMaybe(row.check_out)}</td>
+      <td><span class="badge ${badgeClass}">${status || "-"}</span></td>
+    `;
+    tableBody.appendChild(tr);
+  });
+}
+
+function ensureGlobalAlertOverlay() {
+  if (document.getElementById("globalAlertOverlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "globalAlertOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "99999";
+  overlay.style.display = "none";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.background = "rgba(0,0,0,0.72)";
+  overlay.style.backdropFilter = "blur(2px)";
+  overlay.style.padding = "18px";
+
+  overlay.innerHTML = `
+    <div style="width:min(780px, 96vw); background:#fff; border-radius:16px; box-shadow:0 18px 60px rgba(0,0,0,0.35); padding:18px;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; border-bottom:1px solid #eef2f6; padding-bottom:12px; margin-bottom:12px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div id="globalAlertIcon" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; background:#ffe5e5; color:#c0392b;">!</div>
+          <div>
+            <div id="globalAlertTitle" style="font-weight:900; font-size:20px; color:#0a3d62;">ALERT</div>
+            <div id="globalAlertSubtitle" style="color:#5b6b7a; margin-top:2px;">Immediate attention required</div>
+          </div>
+        </div>
+        <button id="globalAlertAcknowledge" style="border:none; border-radius:10px; padding:10px 14px; cursor:pointer; background:#0a3d62; color:#fff; font-weight:800;">
+          Acknowledge
+        </button>
+      </div>
+
+      <div id="globalAlertMessage" style="font-size:18px; font-weight:800; color:#2c3e50; margin-bottom:10px;">—</div>
+
+      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:10px;">
+        <div style="flex:1; min-width:180px; background:#f7fbff; border:1px solid #e6eef6; border-radius:12px; padding:12px;">
+          <div style="font-weight:800; color:#0a3d62;">Alert Type</div>
+          <div id="globalAlertType" style="margin-top:4px; font-size:16px; color:#2c3e50;">—</div>
+        </div>
+        <div style="flex:1; min-width:180px; background:#f7fbff; border:1px solid #e6eef6; border-radius:12px; padding:12px;">
+          <div style="font-weight:800; color:#0a3d62;">Work Time</div>
+          <div id="globalAlertWorkTime" style="margin-top:4px; font-size:16px; color:#2c3e50;">—</div>
+        </div>
+        <div style="flex:1; min-width:180px; background:#f7fbff; border:1px solid #e6eef6; border-radius:12px; padding:12px;">
+          <div style="font-weight:800; color:#0a3d62;">Updated</div>
+          <div id="globalAlertUpdated" style="margin-top:4px; font-size:16px; color:#2c3e50;">—</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; color:#6b7b8a; font-size:13px;">
+        This alert is shown across all pages until the device returns to <b>OK</b>.
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const ack = overlay.querySelector("#globalAlertAcknowledge");
+  ack?.addEventListener("click", () => {
+    // Hide locally, but it will re-appear if the alert is still active on next poll.
+    overlay.style.display = "none";
+  });
+}
+
+function setGlobalAlertOverlay(status) {
+  const overlay = document.getElementById("globalAlertOverlay");
+  if (!overlay) return;
+
+  const alertRaw = (status?.alert ?? "UNKNOWN").toString();
+  const alertUp = alertRaw.trim().toUpperCase();
+  const isOk = alertUp === "OK" || alertUp === "NORMAL" || alertUp === "SAFE";
+
+  if (isOk) {
+    overlay.style.display = "none";
+    return;
+  }
+
+  const message = status?.message ?? `⚠ ALERT: ${alertRaw}`;
+  const worktime = status?.worktime ?? "—";
+  const time = status?.source_created_at || status?.created_at;
+
+  const isCritical = alertUp.includes("SOS") || alertUp.includes("HEART");
+  const icon = alertUp.includes("SOS")
+    ? "🚨"
+    : alertUp.includes("HEART")
+      ? "❤️"
+      : alertUp.includes("GAS")
+        ? "⚠"
+        : alertUp.includes("TEMP")
+          ? "🌡"
+          : "!";
+
+  const color = isCritical ? "#d32f2f" : "#f39c12";
+  const soft = isCritical ? "#ffe5e5" : "#fff2d6";
+
+  const iconEl = document.getElementById("globalAlertIcon");
+  const titleEl = document.getElementById("globalAlertTitle");
+  const subEl = document.getElementById("globalAlertSubtitle");
+  const msgEl = document.getElementById("globalAlertMessage");
+  const typeEl = document.getElementById("globalAlertType");
+  const wtEl = document.getElementById("globalAlertWorkTime");
+  const updEl = document.getElementById("globalAlertUpdated");
+
+  if (iconEl) {
+    iconEl.textContent = icon;
+    iconEl.style.background = soft;
+    iconEl.style.color = color;
+  }
+  if (titleEl) titleEl.textContent = isCritical ? "CRITICAL ALERT" : "ALERT";
+  if (subEl) subEl.textContent = isCritical ? "SMS will be sent for SOS/HEART" : "Please check worker condition";
+  if (msgEl) msgEl.textContent = message;
+  if (typeEl) typeEl.textContent = alertRaw;
+  if (wtEl) wtEl.textContent = String(worktime);
+  if (updEl) updEl.textContent = time ? new Date(time).toLocaleString() : "—";
+
+  overlay.style.display = "flex";
+}
+
+function lockWorkTimeInputs() {
+  // Make work time non-editable anywhere it exists in the UI.
+  const el = document.getElementById("workTime");
+  if (!el) return;
+  el.setAttribute("readonly", "true");
+  el.setAttribute("disabled", "true");
+  el.placeholder = "Auto-updated from sensors";
+}
+
+function isRavi(worker) {
+  const name = (worker?.name ?? "").toString().trim().toLowerCase();
+  return name === "ravi" || name.includes("ravi");
+}
+
+function getDisplayedWorkTime(worker) {
+  // Requirement: only Ravi gets live worktime; everyone else is always 0.
+  if (!isRavi(worker)) return 0;
+  const n = Number(latestSensorWorktime);
+  return Number.isFinite(n) ? n : 0;
+}
 
 function setLiveStatusUI(status) {
   const dot = document.getElementById("liveStatusDot");
   const msg = document.getElementById("liveStatusMessage");
-  const work = document.getElementById("liveWorkTime");
   const upd = document.getElementById("liveStatusUpdated");
-  if (!dot || !msg || !work || !upd) return; // not on workers.html
+  if (!dot || !msg || !upd) return; // only exists on workers.html
 
   const alert = (status?.alert ?? "UNKNOWN").toString();
   const message = status?.message ?? "—";
-  const worktime = status?.worktime ?? "—";
   const time = status?.source_created_at || status?.created_at;
 
   const alertUp = alert.toUpperCase();
@@ -68,8 +326,10 @@ function setLiveStatusUI(status) {
   dot.style.background = color;
   dot.style.boxShadow = `0 0 0 4px ${color}1f`;
   msg.textContent = message;
-  work.textContent = String(worktime);
   upd.textContent = time ? new Date(time).toLocaleString() : "—";
+
+  const wt = Number(status?.worktime);
+  latestSensorWorktime = Number.isFinite(wt) ? wt : latestSensorWorktime;
 }
 
 async function loadLatestWorkerStatus() {
@@ -102,12 +362,15 @@ async function loadLatestWorkerStatus() {
 let _liveStatusTimer = null;
 async function startLiveStatusPolling() {
   // Only start on pages that have the status bar.
-  if (!document.getElementById("liveStatusBar")) return;
+  // But always keep the global alert overlay updated on every page.
   if (_liveStatusTimer) return;
 
   const tick = async () => {
     const status = await loadLatestWorkerStatus();
-    if (status) setLiveStatusUI(status);
+    if (status) {
+      setLiveStatusUI(status);
+      setGlobalAlertOverlay(status);
+    }
   };
 
   await tick();
@@ -190,7 +453,9 @@ async function addWorker() {
     email: getValue("email"),
     gender: getValue("gender"),
     blood_group: getValue("bloodGroup"),
-    work_time: getValue("workTime"),
+    // Work time is not user-writable; default stored value is 0 for all workers.
+    // Ravi's displayed work time is live-updated from sensors (worker_status.worktime).
+    work_time: 0,
     checkup: getValue("checkup"),
     health: getValue("health") || "Fit",
     history: getValue("history"),
@@ -267,6 +532,7 @@ function displayWorkers() {
   workers.forEach((worker, index) => {
     const color = worker.isHazard ? "red" : "#1b7f3a";
     const photoSrc = worker.photo || "logo.png";
+    const displayWorkTime = getDisplayedWorkTime(worker);
 
     const row = document.createElement("tr");
     row.className = "worker-row";
@@ -286,7 +552,9 @@ function displayWorkers() {
 
     row.addEventListener("click", (event) => {
       if (event.target?.tagName === "BUTTON") return;
-      showDetails(worker, event);
+      // Inject live work time into the object for the profile rendering only.
+      const workerForProfile = { ...worker, work_time: displayWorkTime };
+      showDetails(workerForProfile, event);
       if (selectedRow) selectedRow.classList.remove("selected-row");
       row.classList.add("selected-row");
       selectedRow = row;
@@ -394,7 +662,7 @@ function showDetails(worker, event) {
       <div><b>Age:</b></div><div>${worker.age || "-"}</div>
       <div><b>Mobile:</b></div><div>${worker.mobile || "-"}</div>
       <div><b>Email:</b></div><div>${worker.email || "-"}</div>
-      <div><b>Work Time:</b></div><div>${worker.work_time || "-"}</div>
+      <div><b>Work Time:</b></div><div>${worker.work_time ?? "-"}</div>
       <div><b>Checkup:</b></div><div>${worker.checkup || "-"}</div>
       <div><b>History:</b></div><div>${worker.history || "-"}</div>
     </div>
@@ -449,3 +717,5 @@ window.searchWorker = searchWorker;
 window.showDetails = showDetails;
 window.closeProfile = closeProfile;
 window.login = login;
+window.attendanceCheckIn = attendanceCheckIn;
+window.attendanceCheckOut = attendanceCheckOut;

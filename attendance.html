@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="logo.png" type="image/png">
+  <title>Attendance</title>
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="script.js"></script>
+
+  <style>
+    .attendance-wrap{
+      width:90%;
+      max-width:1100px;
+      margin: 20px auto 60px auto;
+      background:#fff;
+      border-radius:10px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.10);
+      padding:18px;
+    }
+    .attendance-controls{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:14px;
+    }
+    .attendance-controls select{
+      min-width:240px;
+      padding:10px;
+      border:1px solid #cfd9e3;
+      border-radius:8px;
+      font-size:15px;
+      outline:none;
+    }
+    .attendance-controls .btns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .attendance-controls button{
+      padding:10px 14px;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      color:#fff;
+      background:#1f3a5f;
+      font-weight:700;
+    }
+    .attendance-controls button.secondary{
+      background:#2f5d8a;
+    }
+    .attendance-table{
+      width:100%;
+      border-collapse:collapse;
+      overflow:hidden;
+      border-radius:10px;
+    }
+    .attendance-table th{
+      background:#1f3a5f;
+      color:#fff;
+      padding:12px;
+      text-align:left;
+      font-size:14px;
+    }
+    .attendance-table td{
+      padding:12px;
+      border-bottom:1px solid #eef2f6;
+      color:#2c3e50;
+      font-size:14px;
+      background:#fff;
+    }
+    .badge{
+      display:inline-block;
+      padding:5px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:12px;
+      color:#fff;
+    }
+    .badge.in{ background:#18a558; }
+    .badge.out{ background:#95a5a6; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <img src="logo.png" class="nav-logo">
+    <a href="home.html">Home</a>
+    <a href="schemes.html">Schemes</a>
+    <a href="workers.html">Workers Profile</a>
+    <a class="active" href="attendance.html">Attendance</a>
+  </div>
+
+  <div class="header">
+    <h1>Worker Attendance</h1>
+    <p>Check In / Check Out using worker name only</p>
+  </div>
+
+  <div class="attendance-wrap">
+    <div class="attendance-controls">
+      <div>
+        <select id="attendanceWorkerDropdown">
+          <option value="">Select Worker</option>
+        </select>
+      </div>
+      <div class="btns">
+        <button onclick="attendanceCheckIn()">Check In</button>
+        <button class="secondary" onclick="attendanceCheckOut()">Check Out</button>
+      </div>
+    </div>
+
+    <table class="attendance-table">
+      <thead>
+        <tr>
+          <th>Worker</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="attendanceTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>Sanitation Workers Monitoring Portal</p>
+    <p>Municipal Welfare Department</p>
+  </div>
+</body>
+</html>
+
